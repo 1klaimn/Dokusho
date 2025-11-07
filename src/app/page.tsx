@@ -1,8 +1,8 @@
 "use client"
 
 import { Button } from "@/components/ui/button";
-import { AuthModal } from "@/src/components/auth-modal";
 import Image from "next/image";
+import { AuthModal } from "../components/layout-components";
 
 export default function HomePage() {
   return (

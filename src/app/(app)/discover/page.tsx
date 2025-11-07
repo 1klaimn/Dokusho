@@ -1,5 +1,6 @@
-import { MangaCard } from "@/src/components/manga-card";
-import { PaginationControls } from "@/src/components/pagination-controls";
+import { PaginationControls } from "@/src/components/dashboard-components";
+import { MangaCard } from "@/src/components/manga-cards";
+
 
 const MANGA_PER_PAGE = 18;
 

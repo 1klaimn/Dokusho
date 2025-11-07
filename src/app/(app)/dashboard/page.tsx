@@ -3,10 +3,9 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { redirect } from 'next/navigation';
 import prisma from '@/src/lib/db';
 import { Manga, UserManga, Status, Prisma, Tag, Source, UserMangaSource } from '@prisma/client';
-import { MangaListItem } from '@/src/components/manga-list-item';
-import { DashboardFilters } from '@/src/components/dashboard-filters';
-import { MangaCard } from '@/src/components/manga-card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { DashboardFilters } from '@/src/components/dashboard-components';
+import { MangaCard, MangaListItem } from '@/src/components/manga-cards';
 
 export type UserMangaWithDetails = UserManga & { 
   manga: Manga;

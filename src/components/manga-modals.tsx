@@ -9,17 +9,18 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { updateUserMangaEntry } from "@/app/(app)/dashboard/actions";
+import { updateUserMangaEntry, addMangaToList } from "@/src/lib/server-actions";
 import { Source, Status, Tag } from "@prisma/client";
 import { UserMangaWithDetails } from "@/app/(app)/dashboard/page";
-import { SourceManager } from "@/src/components/source-manager";
-import { ChapterSelector } from "@/src/components/chapter-selector";
-import { MultiSelectTag } from "@/src/components/multi-select-tag";
-import { NotesModal } from "@/src/components/notes-modal";
-import { ScorePopover } from "@/src/components/score-popover";
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatStatus } from "@/src/lib/utils";
 import { ArrowRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Slider } from "@/components/ui/slider";
+import { X } from 'lucide-react';
+import { ChapterSelector, MultiSelectTag, SourceManager } from "./manga-controls";
 
 interface EditProgressModalProps {
   item: UserMangaWithDetails;
@@ -28,6 +29,20 @@ interface EditProgressModalProps {
   children: React.ReactNode;
 }
 
+interface AddToDashboardModalProps {
+  mangaData: { id: number; title: string; imageUrl: string; };
+  children: React.ReactNode;
+}
+
+interface NotesModalProps {
+  notes: string;
+  setNotes: (notes: string) => void;
+}
+
+interface ScorePopoverProps {
+  score: number;
+  setScore: (score: number) => void;
+}
 export const EditProgressModal = ({ item, availableSources, userTags, children }: EditProgressModalProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [progress, setProgress] = useState(item.progress);
@@ -59,7 +74,7 @@ export const EditProgressModal = ({ item, availableSources, userTags, children }
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-4xl p-0" showCloseButton={false}>
         <div className="flex">
-          <div className="hidden sm:block w-[400px] flex-shrink-0">
+          <div className="hidden sm:block w-[400px] shrink-0">
             <Image 
               src={item.manga.imageUrl || ''} 
               alt={item.manga.title} 
@@ -161,5 +176,138 @@ export const EditProgressModal = ({ item, availableSources, userTags, children }
         </div>
       </DialogContent>
     </Dialog>
+  );
+};
+
+export const AddToDashboardModal = ({ mangaData, children }: AddToDashboardModalProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [status, setStatus] = useState<Status>("PLAN_TO_READ");
+  const [isPending, startTransition] = useTransition();
+
+  const handleSubmit = () => {
+    startTransition(async () => {
+      const result = await addMangaToList({ ...mangaData, status });
+      if (result.success) {
+        toast.success(result.message);
+        setIsOpen(false);
+      } else {
+        toast.error(result.error);
+      }
+    });
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild onClick={(e) => e.stopPropagation()}>
+        {children}
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <Image src={mangaData.imageUrl} alt={mangaData.title} width={100} height={150} className="rounded-md object-cover mx-auto" />
+          <DialogTitle className="text-center pt-2">{mangaData.title}</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="status">Status</Label>
+            <Select value={status} onValueChange={(value: Status) => setStatus(value)}>
+              <SelectTrigger id="status"><SelectValue /></SelectTrigger>
+              <SelectContent>{Object.values(Status).map((s) => (<SelectItem key={s} value={s}>{s.replace("_", " ")}</SelectItem>))}</SelectContent>
+            </Select>
+          </div>
+          {}
+        </div>
+        <DialogFooter>
+          <Button onClick={handleSubmit} disabled={isPending} className="w-full">
+            {isPending ? "Adding..." : "Add to Dashboard"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export const NotesModal = ({ notes, setNotes }: NotesModalProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [localNotes, setLocalNotes] = useState(notes);
+
+  const handleUpdate = () => {
+    setNotes(localNotes);
+    setIsOpen(false);
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="w-full h-10 font-normal justify-start text-muted-foreground">
+          {notes ? <p className="truncate">{notes}</p> : "Click to add a note"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Notes</DialogTitle>
+        </DialogHeader>
+        <Tabs defaultValue="write">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="write">Write</TabsTrigger>
+            <TabsTrigger value="preview">Preview</TabsTrigger>
+          </TabsList>
+          <TabsContent value="write">
+            <Textarea 
+              value={localNotes}
+              onChange={(e) => setLocalNotes(e.target.value)}
+              placeholder="Add your notes here"
+              className="mt-2 min-h-[150px]"
+            />
+          </TabsContent>
+          <TabsContent value="preview" className="mt-2 min-h-[150px] border p-2 rounded-md">
+            {localNotes || "Nothing to preview"}
+          </TabsContent>
+        </Tabs>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setIsOpen(false)}>Close</Button>
+          <Button onClick={handleUpdate}>Update notes</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export const ScorePopover = ({ score, setScore }: ScorePopoverProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+  // -----------------------
+
+  const handleScoreChange = (value: number[]) => {
+    setScore(value[0]);
+  };
+
+  const handleResetAndClose = () => {
+    setScore(0);
+    setIsOpen(false);
+  };
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="w-full h-10 font-normal justify-start text-muted-foreground">
+          {score > 0 ? `Score: ${score} / 10` : "Click to rate"}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56" align="start">
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h4 className="font-medium leading-none">Score: {score} / 10</h4>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleResetAndClose}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <Slider
+            value={[score]} 
+            max={10}
+            step={1}
+            onValueChange={handleScoreChange}
+          />
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 };

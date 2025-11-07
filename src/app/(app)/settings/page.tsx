@@ -3,8 +3,8 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { redirect } from "next/navigation";
 import prisma from "@/src/lib/db";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ThemeSettings } from "@/src/components/theme-settings";
-import { TagManagerSettings } from "@/src/components/tag-manager-settings";
+import { TagManagerSettings, ThemeSettings } from "@/src/components/settings-components";
+
 
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions);

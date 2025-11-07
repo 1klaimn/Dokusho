@@ -17,6 +17,15 @@ interface UpdateData {
   isFavourite?: boolean;
 }
 
+interface MangaData {
+  id: number;
+  title: string;
+  imageUrl: string;
+  type: string;
+  status: string;
+  userStatus?: Status;
+}
+
 export async function updateUserMangaEntry(userMangaId: string, data: UpdateData) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -252,5 +261,94 @@ export async function findNextChapterUrl(userMangaId: string) {
   } catch (error) {
     console.error("Failed to find next chapter:", error);
     return { success: false, error: "Could not find the next chapter." };
+  }
+}
+
+export async function addMangaToList(mangaData: MangaData) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return { success: false, error: "You must be logged in." };
+  }
+  const userId = session.user.id;
+
+  const existingEntry = await prisma.userManga.findUnique({
+    where: { userId_mangaId: { userId, mangaId: mangaData.id } },
+  });
+
+  if (existingEntry) {
+    return { success: false, error: "This manga is already in your list." };
+  }
+
+  // When creating a new manga entry, also save its type
+  await prisma.manga.upsert({
+    where: { id: mangaData.id },
+    update: { type: mangaData.type }, // Also update the type if it's somehow missing
+    create: {
+      id: mangaData.id,
+      title: mangaData.title,
+      imageUrl: mangaData.imageUrl,
+      type: mangaData.type, // <-- SAVE THE TYPE HERE
+      status: mangaData.status,
+    },
+  });
+
+  await prisma.userManga.create({
+    data: {
+      userId: userId,
+      mangaId: mangaData.id,
+      status: mangaData.userStatus || "PLAN_TO_READ",
+    },
+  });
+
+  revalidatePath("/dashboard");
+  return { success: true, message: "New entry added!" };
+}
+
+export async function createTag(name: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return { success: false, error: "Authentication required." };
+  }
+
+  if (!name.trim()) {
+    return { success: false, error: "Tag name cannot be empty." };
+  }
+
+  try {
+    await prisma.tag.create({
+      data: {
+        name: name.trim(),
+        userId: session.user.id,
+      },
+    });
+    revalidatePath("/settings");
+    return { success: true, message: "Tag created successfully." };
+  } catch (error) {
+    // P2002 is the Prisma code for a unique constraint violation
+    if ((error as any).code === 'P2002') {
+      return { success: false, error: "A tag with this name already exists." };
+    }
+    return { success: false, error: "Failed to create tag." };
+  }
+}
+
+export async function deleteTag(tagId: string) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return { success: false, error: "Authentication required." };
+  }
+
+  try {
+    await prisma.tag.delete({
+      where: {
+        id: tagId,
+        userId: session.user.id, // Ensure user can only delete their own tags
+      },
+    });
+    revalidatePath("/settings");
+    revalidatePath("/dashboard"); // Also revalidate dashboard in case tags are removed
+    return { success: true, message: "Tag deleted." };
+  } catch (error) {
+    return { success: false, error: "Failed to delete tag." };
   }
 }

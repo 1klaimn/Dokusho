@@ -11,6 +11,7 @@ import { Tag } from "@prisma/client";
 import { PlusCircle, List, LayoutGrid, Search, ArrowDownUp, ArrowDown, ArrowUp } from "lucide-react";
 import { formatStatus } from "@/src/lib/utils";
 import { Status } from "@prisma/client";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const MANGA_TYPES = ["Manga", "Manhwa", "Manhua"];
 const PUBLICATION_STATUSES = ["Publishing", "Finished", "On Hiatus", "Discontinued"];
@@ -42,8 +43,8 @@ export const DashboardFilters = ({ userTags }: DashboardFiltersProps) => {
   const [query, setQuery] = useState(urlQuery);
 
   useEffect(() => {
-    if (urlQuery !== query) setQuery(urlQuery);
-  }, [urlQuery, query]);
+    setQuery(urlQuery);
+  }, [urlQuery]);
 
   const handleUrlChange = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -105,7 +106,7 @@ export const DashboardFilters = ({ userTags }: DashboardFiltersProps) => {
     <div className="flex flex-col gap-4">
       {/* --- TOP ROW: SEARCH, VIEW, SORT --- */}
       <div className="flex items-center gap-2">
-        <form onSubmit={handleSearchSubmit} className="relative flex-grow">
+        <form onSubmit={handleSearchSubmit} className="relative grow">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search your list..." className="pl-9 h-10" />
         </form>
@@ -174,6 +175,47 @@ export const DashboardFilters = ({ userTags }: DashboardFiltersProps) => {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+    </div>
+  );
+};
+
+interface PaginationControlsProps {
+  currentPage: number;
+  hasNextPage: boolean;
+}
+
+export const PaginationControls = ({ currentPage, hasNextPage }: PaginationControlsProps) => {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const handlePageChange = (newPage: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set("page", newPage.toString());
+    router.push(`${pathname}?${params.toString()}`);
+  };
+
+  return (
+    <div className="flex items-center justify-center gap-4 mt-8">
+      <Button
+        variant="outline"
+        onClick={() => handlePageChange(currentPage - 1)}
+        disabled={currentPage <= 1}
+      >
+        <ChevronLeft className="h-4 w-4 mr-2" />
+        Previous
+      </Button>
+      <span className="text-sm font-medium">
+        Page {currentPage}
+      </span>
+      <Button
+        variant="outline"
+        onClick={() => handlePageChange(currentPage + 1)}
+        disabled={!hasNextPage}
+      >
+        Next
+        <ChevronRight className="h-4 w-4 ml-2" />
+      </Button>
     </div>
   );
 };

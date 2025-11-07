@@ -2,8 +2,7 @@ import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Star, Users, Library, BookCheck, Clock } from 'lucide-react';
-import { AddToListButton } from '@/src/components/add-to-list-button';
-import { formatStatus } from '@/src/lib/utils';
+import { AddToListButton } from '@/src/components/manga-controls';
 
 interface MangaDetails {
   mal_id: number;

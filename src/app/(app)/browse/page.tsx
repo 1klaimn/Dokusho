@@ -1,6 +1,6 @@
-import { MangaCard } from "@/src/components/manga-card";
-import { BrowseControls } from "@/src/components/browse-controls";
-import { BrowseFilters } from "@/src/components/browse-filters"; // <-- Import new component
+import { MangaCard } from "@/src/components/manga-cards";
+import { BrowseControls, BrowseFilters } from "@/src/components/search-components";
+
 
 interface JikanMangaSearchResult {
   mal_id: number;
