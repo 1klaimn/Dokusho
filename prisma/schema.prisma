@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+}
+
+// --- AUTH.JS MODELS ---
+model User {
+  id             String        @id @default(cuid())
+  name           String?
+  email          String?       @unique
+  emailVerified  DateTime?
+  image          String?
+  hashedPassword String?
+  accounts       Account[]
+  sessions       Session[]
+  trackedManga   UserManga[]
+  tags           Tag[] // Add relation to tags owned by the user
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+}
+
+// --- APPLICATION MODELS ---
+enum Status {
+  READING
+  COMPLETED
+  ON_HOLD
+  DROPPED
+  PLAN_TO_READ
+}
+
+model Manga {
+  id        Int      @id
+  title     String
+  imageUrl  String?
+  type      String?
+  status    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  trackedBy UserManga[]
+}
+
+model UserManga {
+  id        String   @id @default(cuid())
+  userId    String
+  mangaId   Int
+  status    Status   @default(PLAN_TO_READ)
+  progress  Int      @default(0)
+  notes     String?
+  score     Int?     // Score out of 10, for example
+  isHidden  Boolean  @default(false)
+  isFavourite Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  manga     Manga    @relation(fields: [mangaId], references: [id], onDelete: Cascade)
+  tags      Tag[]    
+  sources   UserMangaSource[]
+
+  @@unique([userId, mangaId])
+}
+
+model Tag {
+  id        String   @id @default(cuid())
+  name      String
+  userId    String
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mangaEntries UserManga[]
+
+  @@unique([userId, name])
+}
+
+model Source {
+  id String @id @default(cuid())
+  name String @unique
+  url String
+  icon String?
+
+  userMangaSource UserMangaSource[]
+}
+
+model UserMangaSource {
+  id            String  @id @default(cuid())
+  userMangaId   String
+  sourceId      String
+  url           String // The specific URL for the manga on the source site
+  latestChapter String? // The latest chapter found at this URL
+  chapterId     String?
+  
+  userManga UserManga @relation(fields: [userMangaId], references: [id], onDelete: Cascade)
+  source    Source    @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@unique([userMangaId, sourceId])
+}
