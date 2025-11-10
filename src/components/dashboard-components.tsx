@@ -7,10 +7,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMe
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Tag } from "@prisma/client";
 import { PlusCircle, List, LayoutGrid, Search, ArrowDownUp, ArrowDown, ArrowUp } from "lucide-react";
 import { formatStatus } from "@/src/lib/utils";
-import { Status } from "@prisma/client";
+import { Status, Tag } from "@prisma/client";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const MANGA_TYPES = ["Manga", "Manhwa", "Manhua"];

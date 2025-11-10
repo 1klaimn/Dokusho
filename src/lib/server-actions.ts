@@ -2,9 +2,9 @@
 
 import prisma from "@/src/lib/db";
 import { revalidatePath } from "next/cache";
-import { Status } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { Tag, Status,  } from "@prisma/client";
 
 // --- Main Data Update Action ---
 interface UpdateData {
@@ -21,8 +21,8 @@ interface MangaData {
   id: number;
   title: string;
   imageUrl: string;
-  type: string;
-  status: string;
+  type?: string;
+  status?: string;
   userStatus?: Status;
 }
 

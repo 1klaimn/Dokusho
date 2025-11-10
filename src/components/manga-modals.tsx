@@ -30,7 +30,13 @@ interface EditProgressModalProps {
 }
 
 interface AddToDashboardModalProps {
-  mangaData: { id: number; title: string; imageUrl: string; };
+  mangaData: { 
+    id: number; 
+    title: string; 
+    imageUrl: string;
+    type?: string;
+    status?: string;
+  };
   children: React.ReactNode;
 }
 
@@ -186,7 +192,10 @@ export const AddToDashboardModal = ({ mangaData, children }: AddToDashboardModal
 
   const handleSubmit = () => {
     startTransition(async () => {
-      const result = await addMangaToList({ ...mangaData, status });
+      const result = await addMangaToList({ 
+        ...mangaData, 
+        userStatus: status 
+      });
       if (result.success) {
         toast.success(result.message);
         setIsOpen(false);

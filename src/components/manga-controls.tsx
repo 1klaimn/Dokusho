@@ -3,25 +3,80 @@
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { addMangaToList, findNextChapterUrl, getChaptersForSource, linkSourceToManga, refreshSourceChapters, removeMangaFromList, unlinkSourceFromManga } from "@/src/lib/server-actions";
-import { ArrowUpRight, Badge, Check, ChevronsUpDown, Command, LinkIcon, Loader2, OctagonXIcon, Plus, PlusCircle, RefreshCw, X } from "lucide-react";
+import {
+  addMangaToList,
+  findNextChapterUrl,
+  getChaptersForSource,
+  linkSourceToManga,
+  refreshSourceChapters,
+  removeMangaFromList,
+  unlinkSourceFromManga,
+} from "@/src/lib/server-actions";
+import {
+  ArrowUpRight,
+  Badge,
+  Check,
+  ChevronsUpDown,
+  Command,
+  LinkIcon,
+  Loader2,
+  OctagonXIcon,
+  Plus,
+  PlusCircle,
+  RefreshCw,
+  X,
+} from "lucide-react";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { Popover, PopoverTrigger, PopoverContent } from "@radix-ui/react-popover";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@radix-ui/react-select";
-import { CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "cmdk";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@radix-ui/react-popover";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@radix-ui/react-select";
+import {
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+} from "cmdk";
 import { UserMangaWithDetails } from "../app/(app)/dashboard/page";
+import { Tag, Source } from "@prisma/client";
 
-// Update the props to include the 'type'
 interface AddToListButtonProps {
   mangaData: {
     id: number;
     title: string;
     imageUrl: string;
-    type: string;
+    type?: string;
+    status?: string;
   };
+}
+
+interface AddToListIconButtonProps {
+  mangaData: {
+    id: number;
+    title: string;
+    imageUrl: string;
+    type?: string;
+    status?: string;
+  };
+}
+
+interface ChapterSelectorProps {
+  item: UserMangaWithDetails;
+  progress: number;
+  setProgress: (progress: number) => void;
 }
 
 export const AddToListButton = ({ mangaData }: AddToListButtonProps) => {
@@ -33,7 +88,7 @@ export const AddToListButton = ({ mangaData }: AddToListButtonProps) => {
       const result = await addMangaToList(mangaData); // The full data is now passed
       if (result.success) {
         toast.success(result.message);
-        router.push('/dashboard');
+        router.push("/dashboard");
       } else {
         toast.error(result.error);
       }
@@ -41,18 +96,21 @@ export const AddToListButton = ({ mangaData }: AddToListButtonProps) => {
   };
 
   return (
-    <Button onClick={handleClick} disabled={isPending} size="lg" className="w-full">
+    <Button
+      onClick={handleClick}
+      disabled={isPending}
+      size="lg"
+      className="w-full"
+    >
       <PlusCircle className="mr-2 h-5 w-5" />
       {isPending ? "Adding..." : "Add to List"}
     </Button>
   );
 };
 
-interface AddToListIconButtonProps {
-  mangaData: { id: number; title: string; imageUrl: string; };
-}
-
-export const AddToListIconButton = ({ mangaData }: AddToListIconButtonProps) => {
+export const AddToListIconButton = ({
+  mangaData,
+}: AddToListIconButtonProps) => {
   const [isPending, startTransition] = useTransition();
 
   const handleClick = () => {
@@ -67,8 +125,17 @@ export const AddToListIconButton = ({ mangaData }: AddToListIconButtonProps) => 
   };
 
   return (
-    <Button variant="ghost" size="icon" onClick={handleClick} disabled={isPending}>
-      {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={handleClick}
+      disabled={isPending}
+    >
+      {isPending ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <Plus className="h-4 w-4" />
+      )}
     </Button>
   );
 };
@@ -82,7 +149,9 @@ export const RemoveMangaButton = ({ userMangaId }: { userMangaId: string }) => {
       if (result.success) {
         // --- Use a success toast but with a custom, destructive icon ---
         toast.success(result.message, {
-          icon: <OctagonXIcon className="size-4 text-red-600 dark:text-red-400" />,
+          icon: (
+            <OctagonXIcon className="size-4 text-red-600 dark:text-red-400" />
+          ),
         });
         // -----------------------------------------------------------------
       } else {
@@ -116,9 +185,9 @@ export const CopyLinkButton = ({ id }: { id: number }) => {
   };
 
   return (
-    <Button 
-      variant="ghost" 
-      size="icon" 
+    <Button
+      variant="ghost"
+      size="icon"
       onClick={handleCopy}
       className="h-8 w-8 rounded-md hover:bg-accent/50"
     >
@@ -137,14 +206,16 @@ interface GoToSourceButtonProps {
 
 export const GoToSourceButton = ({ item }: GoToSourceButtonProps) => {
   const [isPending, startTransition] = useTransition();
-  const hasMangaDexSource = item.sources.some(s => s.source.name === 'MangaDex');
+  const hasMangaDexSource = item.sources.some(
+    (s) => s.source.name === "MangaDex"
+  );
 
   const handleClick = () => {
     startTransition(async () => {
       const result = await findNextChapterUrl(item.id);
       if (result.success && result.url) {
         // Open the found URL in a new tab
-        window.open(result.url, '_blank', 'noopener,noreferrer');
+        window.open(result.url, "_blank", "noopener,noreferrer");
       } else {
         toast.error(result.error || "Could not find source URL.");
       }
@@ -167,40 +238,23 @@ export const GoToSourceButton = ({ item }: GoToSourceButtonProps) => {
   );
 };
 
-interface ChapterSelectorProps {
-  item: UserMangaWithDetails;
-  progress: number;
-  setProgress: (progress: number) => void;
-}
-
-export const ChapterSelector = ({ item, progress, setProgress }: ChapterSelectorProps) => {
+export const ChapterSelector = ({
+  item,
+  progress,
+  setProgress,
+}: ChapterSelectorProps) => {
   const [chapters, setChapters] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const mangaDexSource = item.sources.find(s => s.source.name === 'MangaDex');
+  const mangaDexSource = item.sources.find((s) => s.source.name === "MangaDex");
 
   useEffect(() => {
-    // FIX: Éviter setState si le composant est démonté
-    let isMounted = true;
-
     if (mangaDexSource) {
       setIsLoading(true);
       getChaptersForSource(mangaDexSource.id)
-        .then(fetchedChapters => {
-          if (isMounted) {
-            setChapters(fetchedChapters);
-          }
-        })
-        .finally(() => {
-          if (isMounted) {
-            setIsLoading(false);
-          }
-        });
+        .then(setChapters)
+        .finally(() => setIsLoading(false));
     }
-
-    return () => {
-      isMounted = false;
-    };
-  }, [mangaDexSource?.id]);
+  }, [mangaDexSource]);
   // If no MangaDex source, or still loading, show the original number input
   if (!mangaDexSource || isLoading) {
     return (
@@ -217,20 +271,20 @@ export const ChapterSelector = ({ item, progress, setProgress }: ChapterSelector
 
   // If we have chapters, show the dropdown
   return (
-    <Select 
+    <Select
       value={String(progress)}
       onValueChange={(value) => setProgress(Number(value))}
     >
       <SelectTrigger className="w-full h-9">
         <SelectValue placeholder="Select a chapter" />
       </SelectTrigger>
-      <SelectContent 
+      <SelectContent
         className="max-h-[300px]"
         side="bottom"
         align="start"
         sideOffset={4}
       >
-        {chapters.map(chapter => (
+        {chapters.map((chapter) => (
           <SelectItem key={chapter} value={chapter}>
             Chapter {chapter}
           </SelectItem>
@@ -247,7 +301,12 @@ interface MultiSelectTagProps {
   className?: string;
 }
 
-export const MultiSelectTag = ({ allUserTags, selectedTags, setSelectedTags, className }: MultiSelectTagProps) => {
+export const MultiSelectTag = ({
+  allUserTags,
+  selectedTags,
+  setSelectedTags,
+  className,
+}: MultiSelectTagProps) => {
   const [open, setOpen] = useState(false);
 
   const handleToggleTag = (tagName: string) => {
@@ -270,8 +329,8 @@ export const MultiSelectTag = ({ allUserTags, selectedTags, setSelectedTags, cla
           <div className="flex gap-1 flex-wrap items-center">
             {selectedTags.length > 0 ? (
               <>
-                {selectedTags.slice(0, 1).map(tag => (
-                   <Badge
+                {selectedTags.slice(0, 1).map((tag) => (
+                  <Badge
                     variant="secondary"
                     key={tag}
                     className="mr-1"
@@ -297,7 +356,7 @@ export const MultiSelectTag = ({ allUserTags, selectedTags, setSelectedTags, cla
           <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent 
+      <PopoverContent
         className="w-[--radix-popover-trigger-width] p-0"
         side="bottom"
         align="start"
@@ -314,7 +373,13 @@ export const MultiSelectTag = ({ allUserTags, selectedTags, setSelectedTags, cla
                   value={tag.name}
                   onSelect={() => handleToggleTag(tag.name)}
                 >
-                  <Check className={`mr-2 h-4 w-4 ${selectedTags.includes(tag.name) ? "opacity-100" : "opacity-0"}`} />
+                  <Check
+                    className={`mr-2 h-4 w-4 ${
+                      selectedTags.includes(tag.name)
+                        ? "opacity-100"
+                        : "opacity-0"
+                    }`}
+                  />
                   {tag.name}
                 </CommandItem>
               ))}
@@ -332,28 +397,32 @@ interface TagInputProps {
 }
 
 export const TagInput = ({ tags, setTags }: TagInputProps) => {
-  const [inputValue, setInputValue] = useState('');
+  const [inputValue, setInputValue] = useState("");
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && inputValue.trim()) {
+    if (e.key === "Enter" && inputValue.trim()) {
       e.preventDefault();
       const newTag = inputValue.trim();
       if (!tags.includes(newTag)) {
         setTags([...tags, newTag]);
       }
-      setInputValue('');
+      setInputValue("");
     }
   };
 
   const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
+    setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
   return (
     <div>
       <div className="flex flex-wrap gap-2 mb-2">
         {tags.map((tag) => (
-          <Badge key={tag} variant="secondary" className="flex items-center gap-1">
+          <Badge
+            key={tag}
+            variant="secondary"
+            className="flex items-center gap-1"
+          >
             {tag}
             <button
               type="button"
@@ -380,7 +449,10 @@ interface SourceManagerProps {
   availableSources: Source[];
 }
 
-export const SourceManager = ({ item, availableSources }: SourceManagerProps) => {
+export const SourceManager = ({
+  item,
+  availableSources,
+}: SourceManagerProps) => {
   const [selectedSourceId, setSelectedSourceId] = useState<string>("");
   const [url, setUrl] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -391,25 +463,38 @@ export const SourceManager = ({ item, availableSources }: SourceManagerProps) =>
       return;
     }
     startTransition(async () => {
-      const result = await linkSourceToManga(item.id, selectedSourceId, url.trim());
-      if (result?.success) { toast.success(result.message); } 
-      else { toast.error(result?.error || "An unknown error occurred."); }
+      const result = await linkSourceToManga(
+        item.id,
+        selectedSourceId,
+        url.trim()
+      );
+      if (result?.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result?.error || "An unknown error occurred.");
+      }
     });
   };
-  
+
   const handleRemoveSource = (userMangaSourceId: string) => {
     startTransition(async () => {
       const result = await unlinkSourceFromManga(userMangaSourceId);
-      if (result?.success) { toast.success(result.message); } 
-      else { toast.error(result?.error || "An unknown error occurred."); }
+      if (result?.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result?.error || "An unknown error occurred.");
+      }
     });
   };
 
   const handleRefreshSource = (userMangaSourceId: string) => {
     startTransition(async () => {
       const result = await refreshSourceChapters(userMangaSourceId);
-      if (result?.success) { toast.success(result.message); } 
-      else { toast.error(result?.error || "An unknown error occurred."); }
+      if (result?.success) {
+        toast.success(result.message);
+      } else {
+        toast.error(result?.error || "An unknown error occurred.");
+      }
     });
   };
 
@@ -417,16 +502,44 @@ export const SourceManager = ({ item, availableSources }: SourceManagerProps) =>
     <div className="space-y-2">
       {/* List of currently linked sources */}
       {item.sources.map((linkedSource) => (
-        <div key={linkedSource.id} className="flex items-center gap-2 h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm">
-          {linkedSource.source.icon && <Image src={linkedSource.source.icon} alt={linkedSource.source.name} width={16} height={16} />}
-          <span className="text-sm font-medium truncate grow">{linkedSource.source.name}</span>
-          <span className="text-sm text-muted-foreground">Ch. {linkedSource.latestChapter || '--'}</span>
-          {linkedSource.source.name === 'MangaDex' && (
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRefreshSource(linkedSource.id)} disabled={isPending}>
-              <RefreshCw className={`h-4 w-4 ${isPending ? 'animate-spin' : ''}`} />
+        <div
+          key={linkedSource.id}
+          className="flex items-center gap-2 h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+        >
+          {linkedSource.source.icon && (
+            <Image
+              src={linkedSource.source.icon}
+              alt={linkedSource.source.name}
+              width={16}
+              height={16}
+            />
+          )}
+          <span className="text-sm font-medium truncate grow">
+            {linkedSource.source.name}
+          </span>
+          <span className="text-sm text-muted-foreground">
+            Ch. {linkedSource.latestChapter || "--"}
+          </span>
+          {linkedSource.source.name === "MangaDex" && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => handleRefreshSource(linkedSource.id)}
+              disabled={isPending}
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${isPending ? "animate-spin" : ""}`}
+              />
             </Button>
           )}
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveSource(linkedSource.id)} disabled={isPending}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={() => handleRemoveSource(linkedSource.id)}
+            disabled={isPending}
+          >
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -435,13 +548,29 @@ export const SourceManager = ({ item, availableSources }: SourceManagerProps) =>
       {/* Form to add a new source */}
       <div className="flex items-center gap-2">
         <Select value={selectedSourceId} onValueChange={setSelectedSourceId}>
-          <SelectTrigger className="w-[150px] shrink-0 h-10"><SelectValue placeholder="Select source" /></SelectTrigger>
+          <SelectTrigger className="w-[150px] shrink-0 h-10">
+            <SelectValue placeholder="Select source" />
+          </SelectTrigger>
           <SelectContent>
-            {availableSources.map((source) => (<SelectItem key={source.id} value={source.id}>{source.name}</SelectItem>))}
+            {availableSources.map((source) => (
+              <SelectItem key={source.id} value={source.id}>
+                {source.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
-        <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="Paste URL here..." className="grow h-10" />
-        <Button size="icon" className="h-10 w-10" onClick={handleAddOrUpdateSource} disabled={isPending}>
+        <Input
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          placeholder="Paste URL here..."
+          className="grow h-10"
+        />
+        <Button
+          size="icon"
+          className="h-10 w-10"
+          onClick={handleAddOrUpdateSource}
+          disabled={isPending}
+        >
           <Plus className="h-4 w-4" />
         </Button>
       </div>

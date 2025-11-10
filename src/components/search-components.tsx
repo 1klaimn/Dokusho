@@ -14,6 +14,21 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Image from "next/image";
 
+interface SearchResult { 
+  mal_id: number; 
+  title: string; 
+  images: { 
+    jpg: { 
+      image_url: string;
+      small_image_url?: string;
+    }; 
+  }; 
+  chapters: number | null; 
+  members: number; 
+  status: string; 
+  type: string; 
+}
+
 export const SearchBar = () => {
   const [query, setQuery] = useState("");
   const router = useRouter();
@@ -39,8 +54,6 @@ export const SearchBar = () => {
     </form>
   );
 };
-
-interface SearchResult { mal_id: number; title: string; images: { jpg: { image_url: string; }; }; chapters: number | null; members: number; status: string; type: string; }
 
 export const SearchPalette = () => {
   const router = useRouter();
@@ -101,7 +114,7 @@ export const SearchPalette = () => {
       <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden shadow-lg border rounded-lg top-16 translate-y-0">
         <DialogTitle className="sr-only">Search Everything</DialogTitle>
         {}
-        <Command className="[&_[cmdk-input-wrapper]_svg]:h-6 [&_[cmdk-input-wrapper]_svg]:w-6 [&_[cmdk-input]]:h-16 [&_[cmdk-input]]:text-lg [&_[cmdk-input-wrapper]_button]:size-8">
+        <Command className="[&_[cmdk-input-wrapper]_svg]:h-6 [&_[cmdk-input-wrapper]_svg]:w-6 **:[[cmdk-input]]:h-16 **:[[cmdk-input]]:text-lg [&_[cmdk-input-wrapper]_button]:size-8">
           <CommandInput placeholder="Search everything..." value={search} onValueChange={setSearch} />
           <CommandList>
             {isLoading && <CommandEmpty>Searching...</CommandEmpty>}
@@ -114,8 +127,8 @@ export const SearchPalette = () => {
                 value={manga.title} 
                 className="p-3 gap-4 items-center cursor-pointer"
               >
-                <Image src={manga.images.jpg.image_url} alt={manga.title} width={60} height={85} className="rounded-md object-cover aspect-[2/3]" />
-                <div className="flex-grow">
+                <Image src={manga.images.jpg.image_url} alt={manga.title} width={60} height={85} className="rounded-md object-cover aspect-2/3" />
+                <div className="grow">
                   <p className="font-semibold text-lg leading-tight">{manga.title}</p>
                   <div className="text-sm text-muted-foreground mt-1">
                     <span>{manga.chapters || '--'} chapters</span><span className="mx-2">•</span><span>{manga.members.toLocaleString()} users</span>
@@ -134,12 +147,6 @@ export const SearchPalette = () => {
     </Dialog>
   );
 };
-
-interface SearchResult {
-  mal_id: number;
-  title: string;
-  images: { jpg: { small_image_url: string } };
-}
 
 export const CommandPalette = () => {
   const router = useRouter();
@@ -230,9 +237,7 @@ export const BrowseControls = () => {
   const [query, setQuery] = useState(urlQuery);
 
   useEffect(() => {
-    if (urlQuery !== query) {
-      setQuery(urlQuery);
-    }
+    setQuery(urlQuery);
   }, [urlQuery]);
 
   const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {

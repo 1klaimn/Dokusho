@@ -84,7 +84,7 @@ export const TagManagerSettings = ({ userTags }: TagManagerSettingsProps) => {
             </Badge>
           ))
         ) : (
-          <p className="text-sm text-muted-foreground">You haven't created any tags yet.</p>
+          <p className="text-sm text-muted-foreground">You haven&apos;t created any tags yet.</p>
         )}
       </div>
     </div>
