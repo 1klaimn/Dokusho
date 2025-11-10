@@ -204,7 +204,7 @@ export const AuthModal = ({ children }: { children: React.ReactNode }) => {
         
         await signIn('credentials', { email, password, callbackUrl: '/dashboard' });
 
-      } catch (err) {
+      } catch {
         setError('An error occurred during registration.');
         setIsLoading(false);
       }

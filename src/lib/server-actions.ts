@@ -312,6 +312,7 @@ export async function findNextChapterUrl(userMangaId: string) {
 
 export async function addMangaToList(mangaData: MangaData) {
   const session = await getServerSession(authOptions);
+  
   if (!session?.user?.id) {
     return { success: false, error: "You must be logged in." };
   }
@@ -384,7 +385,7 @@ export async function createTag(name: string) {
     });
     revalidatePath("/settings");
     return { success: true, message: "Tag created successfully." };
-  } catch (error) {
+  } catch(error) {
     // P2002 is the Prisma code for a unique constraint violation
     if ((error as any).code === 'P2002') {
       return { success: false, error: "A tag with this name already exists." };
