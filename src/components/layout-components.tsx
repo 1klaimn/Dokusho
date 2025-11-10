@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useState } from 'react';
-import { useSession, signOut, signIn } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { useCommandStore } from '@/src/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -18,7 +18,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { SessionProvider } from "next-auth/react";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import { SearchPalette } from './search-components';
-
+import { signIn } from 'next-auth/react';
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   return <SessionProvider>{children}</SessionProvider>;
@@ -36,44 +36,47 @@ export const Header = () => {
   const { open } = useCommandStore();
 
   return (
-    <><header className="border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 sticky top-0 z-50">
-      <div className="container mx-auto flex h-16 max-w-screen-2xl items-center justify-between px-4">
-        <div className="flex items-center gap-1">
-          <DropdownMenu onOpenChange={setIsMenuOpen}>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon"><AnimatedMenuIcon isOpen={isMenuOpen} /></Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuItem asChild><Link href="/dashboard">Dashboard</Link></DropdownMenuItem>
-              <DropdownMenuItem asChild><Link href="/discover">Discover</Link></DropdownMenuItem>
-              <DropdownMenuItem asChild><Link href="/browse">Browse</Link></DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Link href="/dashboard" className="flex items-center">
-            <span className="text-xl font-bold tracking-tight">読書</span>
-          </Link>
-        </div>
-        <div className="flex flex-1 items-center justify-end gap-3">
-          <Button variant="outline" className="relative w-full max-w-xs justify-start text-muted-foreground" onClick={open}>
-            <Search className="h-4 w-4 mr-2" />
-            Quick search...
-            <Kbd className="absolute right-2 top-1/2 -translate-y-1/2">Ctrl+K</Kbd>
-          </Button>
-          <Button variant="ghost" size="icon"><Bell className="h-5 w-5" /></Button>
-          {session && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild><Avatar className="h-9 w-9 cursor-pointer"><AvatarImage src={session.user?.image ?? ''} alt={session.user?.name ?? 'User'} /><AvatarFallback>{session.user?.name?.[0].toUpperCase()}</AvatarFallback></Avatar></DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>{session.user?.email}</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild className="cursor-pointer"><Link href="/settings"><Settings className="mr-2 h-4 w-4" />Settings</Link></DropdownMenuItem>
-                <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/' })} className="cursor-pointer"><LogOut className="mr-2 h-4 w-4" />Sign Out</DropdownMenuItem>
+    <>
+      <header className="border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 sticky top-0 z-50">
+        <div className="container mx-auto flex h-16 max-w-screen-2xl items-center justify-between px-4">
+          <div className="flex items-center gap-1">
+            <DropdownMenu onOpenChange={setIsMenuOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon"><AnimatedMenuIcon isOpen={isMenuOpen} /></Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem asChild><Link href="/dashboard">Dashboard</Link></DropdownMenuItem>
+                <DropdownMenuItem asChild><Link href="/discover">Discover</Link></DropdownMenuItem>
+                <DropdownMenuItem asChild><Link href="/browse">Browse</Link></DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          )}
+            <Link href="/dashboard" className="flex items-center">
+              <span className="text-xl font-bold tracking-tight">読書</span>
+            </Link>
+          </div>
+          <div className="flex flex-1 items-center justify-end gap-3">
+            <Button variant="outline" className="relative w-full max-w-xs justify-start text-muted-foreground" onClick={open}>
+              <Search className="h-4 w-4 mr-2" />
+              Quick search...
+              <Kbd className="absolute right-2 top-1/2 -translate-y-1/2">Ctrl+K</Kbd>
+            </Button>
+            <Button variant="ghost" size="icon"><Bell className="h-5 w-5" /></Button>
+            {session && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild><Avatar className="h-9 w-9 cursor-pointer"><AvatarImage src={session.user?.image ?? ''} alt={session.user?.name ?? 'User'} /><AvatarFallback>{session.user?.name?.[0].toUpperCase()}</AvatarFallback></Avatar></DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>{session.user?.email}</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild className="cursor-pointer"><Link href="/settings"><Settings className="mr-2 h-4 w-4" />Settings</Link></DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => signOut({ callbackUrl: '/' })} className="cursor-pointer"><LogOut className="mr-2 h-4 w-4" />Sign Out</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
-      </div>
-    </header><SearchPalette /></>
+      </header>
+      <SearchPalette />
+    </>
   );
 };
 
@@ -95,7 +98,7 @@ const top_line = {
   },
   open: {
     rotate: 45,
-    translateY: 6, // Corrected value from 8 to 6
+    translateY: 6,
   },
 };
 
@@ -115,7 +118,7 @@ const bottom_line = {
   },
   open: {
     rotate: -45,
-    translateY: -6, // Corrected value from -8 to -6
+    translateY: -6,
   },
 };
 
@@ -167,7 +170,7 @@ export const AuthModal = ({ children }: { children: React.ReactNode }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false); // <-- Add loading state
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   const toggleVariant = () => {
@@ -177,7 +180,7 @@ export const AuthModal = ({ children }: { children: React.ReactNode }) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true); // <-- Set loading
+    setIsLoading(true);
     setError('');
 
     if (variant === 'REGISTER') {
@@ -199,8 +202,6 @@ export const AuthModal = ({ children }: { children: React.ReactNode }) => {
           return;
         }
         
-        // --- CORRECTED REDIRECTION ---
-        // After successful registration, sign in and redirect to the dashboard
         await signIn('credentials', { email, password, callbackUrl: '/dashboard' });
 
       } catch (err) {
@@ -210,20 +211,18 @@ export const AuthModal = ({ children }: { children: React.ReactNode }) => {
     }
 
     if (variant === 'LOGIN') {
-      // --- CORRECTED REDIRECTION ---
-      // Let signIn handle the redirect on success
       const result = await signIn('credentials', {
         email,
         password,
-        redirect: false, // Keep false here to handle the error case
+        redirect: false,
       });
 
       if (result?.ok) {
-        router.push('/dashboard'); // Manually redirect on success
-        router.refresh(); // Ensure the layout re-renders
+        router.push('/dashboard');
+        router.refresh();
       } else {
         setError('Invalid email or password.');
-        setIsLoading(false); // Stop loading on error
+        setIsLoading(false);
       }
     }
   };

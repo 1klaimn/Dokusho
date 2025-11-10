@@ -4,7 +4,7 @@ import prisma from "@/src/lib/db";
 import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { Tag, Status,  } from "@prisma/client";
+import { Status } from "@prisma/client";
 
 // --- Main Data Update Action ---
 interface UpdateData {
@@ -24,6 +24,26 @@ interface MangaData {
   type?: string;
   status?: string;
   userStatus?: Status;
+}
+
+// Define the MangaDex API response types
+interface MangaDexChapterAttributes {
+  chapter: string | null;
+  title?: string;
+  translatedLanguage?: string;
+}
+
+interface MangaDexChapter {
+  id: string;
+  type: string;
+  attributes: MangaDexChapterAttributes;
+}
+
+interface MangaDexFeedResponse {
+  data: MangaDexChapter[];
+  limit: number;
+  offset: number;
+  total: number;
 }
 
 export async function updateUserMangaEntry(userMangaId: string, data: UpdateData) {
@@ -119,30 +139,44 @@ export async function unlinkSourceFromManga(userMangaSourceId: string) {
 
 // --- Chapter Fetching Logic ---
 async function fetchAndParseMangaDexChapters(mangaUUID: string): Promise<string[]> {
-  const response = await fetch(`https://api.mangadex.org/manga/${mangaUUID}/feed?order[chapter]=desc&translatedLanguage[]=en&limit=500`);
-  if (!response.ok) throw new Error('Failed to fetch from MangaDex chapter feed.');
-  
-  const data = await response.json();
-  if (!data.data) return [];
+  try {
+    const response = await fetch(
+      `https://api.mangadex.org/manga/${mangaUUID}/feed?order[chapter]=desc&translatedLanguage[]=en&limit=500`
+    );
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch from MangaDex chapter feed.');
+    }
+    
+    const data: MangaDexFeedResponse = await response.json();
+    
+    if (!data.data || data.data.length === 0) {
+      return [];
+    }
 
-  // FIX: Add proper type checking for chapter attributes
-  const chapterStrings = data.data
-    .map((ch: any) => {
-      // Check if attributes and chapter exist and are strings
-      if (ch?.attributes && typeof ch.attributes.chapter === 'string') {
-        return ch.attributes.chapter;
-      }
-      return null;
-    })
-    .filter((ch: string | null): ch is string => ch !== null); // Type guard to filter out nulls
-  
-  const uniqueChapters = [...new Set(chapterStrings)];
-  const sortedChapters = uniqueChapters
-    .map(ch => parseFloat(ch))
-    .filter(num => !isNaN(num))
-    .sort((a, b) => b - a);
+    // Extract chapter numbers with proper type checking
+    const chapterStrings = data.data
+      .map((ch: MangaDexChapter) => {
+        // Check if attributes and chapter exist and chapter is a string
+        if (ch?.attributes?.chapter && typeof ch.attributes.chapter === 'string') {
+          return ch.attributes.chapter;
+        }
+        return null;
+      })
+      .filter((ch): ch is string => ch !== null);
+    
+    // Remove duplicates and sort
+    const uniqueChapters = [...new Set(chapterStrings)];
+    const sortedChapters = uniqueChapters
+      .map(ch => parseFloat(ch))
+      .filter(num => !isNaN(num))
+      .sort((a, b) => b - a);
 
-  return sortedChapters.map(String);
+    return sortedChapters.map(String);
+  } catch (error) {
+    console.error("Error fetching MangaDex chapters:", error);
+    return [];
+  }
 }
 
 export async function refreshSourceChapters(userMangaSourceId: string) {
@@ -183,7 +217,7 @@ export async function refreshSourceChapters(userMangaSourceId: string) {
   }
 }
 
-export async function getChaptersForSource(userMangaSourceId: string) {
+export async function getChaptersForSource(userMangaSourceId: string): Promise<string[]> {
   try {
     const userMangaSource = await prisma.userMangaSource.findUnique({
       where: { id: userMangaSourceId },
@@ -194,7 +228,9 @@ export async function getChaptersForSource(userMangaSourceId: string) {
     }
     
     const uuidMatch = userMangaSource.url.match(/mangadex\.org\/title\/([a-f0-9-]+)/);
-    if (!uuidMatch || !uuidMatch[1]) throw new Error("Invalid MangaDex URL.");
+    if (!uuidMatch || !uuidMatch[1]) {
+      throw new Error("Invalid MangaDex URL.");
+    }
     const mangaUUID = uuidMatch[1];
 
     return await fetchAndParseMangaDexChapters(mangaUUID);
@@ -232,20 +268,30 @@ export async function findNextChapterUrl(userMangaId: string) {
     }
     const mangaUUID = uuidMatch[1];
 
-    const response = await fetch(`https://api.mangadex.org/manga/${mangaUUID}/feed?order[chapter]=desc&translatedLanguage[]=en`);
-    if (!response.ok) throw new Error('Failed to fetch from MangaDex chapter feed.');
+    const response = await fetch(
+      `https://api.mangadex.org/manga/${mangaUUID}/feed?order[chapter]=desc&translatedLanguage[]=en`
+    );
     
-    const data = await response.json();
+    if (!response.ok) {
+      throw new Error('Failed to fetch from MangaDex chapter feed.');
+    }
+    
+    const data: MangaDexFeedResponse = await response.json();
+    
     if (!data.data || data.data.length === 0) {
       return { success: true, url: mangaDexSource.url };
     }
 
-    let nextChapterId = null;
+    let nextChapterId: string | null = null;
+    
+    // Iterate through chapters to find the next one after user's progress
     for (let i = data.data.length - 1; i >= 0; i--) {
       const chapter = data.data[i];
-      // FIX: Add type checking for chapter attributes
-      if (chapter?.attributes && typeof chapter.attributes.chapter === 'string') {
+      
+      // Type-safe check for chapter attributes
+      if (chapter?.attributes?.chapter && typeof chapter.attributes.chapter === 'string') {
         const chapterNumber = parseFloat(chapter.attributes.chapter);
+        
         if (!isNaN(chapterNumber) && chapterNumber > userProgress) {
           nextChapterId = chapter.id;
           break;
@@ -271,37 +317,52 @@ export async function addMangaToList(mangaData: MangaData) {
   }
   const userId = session.user.id;
 
-  const existingEntry = await prisma.userManga.findUnique({
-    where: { userId_mangaId: { userId, mangaId: mangaData.id } },
-  });
+  try {
+    // Check if entry already exists
+    const existingEntry = await prisma.userManga.findUnique({
+      where: { userId_mangaId: { userId, mangaId: mangaData.id } },
+    });
 
-  if (existingEntry) {
-    return { success: false, error: "This manga is already in your list." };
+    if (existingEntry) {
+      return { success: false, error: "This manga is already in your list." };
+    }
+
+    // Use a transaction to ensure both operations succeed or fail together
+    await prisma.$transaction(async (tx) => {
+      // First, ensure the Manga exists in the database
+      await tx.manga.upsert({
+        where: { id: mangaData.id },
+        update: { 
+          title: mangaData.title,
+          imageUrl: mangaData.imageUrl,
+          type: mangaData.type,
+          status: mangaData.status 
+        },
+        create: {
+          id: mangaData.id,
+          title: mangaData.title,
+          imageUrl: mangaData.imageUrl,
+          type: mangaData.type,
+          status: mangaData.status,
+        },
+      });
+
+      // Then create the UserManga entry
+      await tx.userManga.create({
+        data: {
+          userId: userId,
+          mangaId: mangaData.id,
+          status: mangaData.userStatus || "PLAN_TO_READ",
+        },
+      });
+    });
+
+    revalidatePath("/dashboard");
+    return { success: true, message: "New entry added!" };
+  } catch (error) {
+    console.error("Failed to add manga to list:", error);
+    return { success: false, error: "An error occurred while adding the manga." };
   }
-
-  // When creating a new manga entry, also save its type
-  await prisma.manga.upsert({
-    where: { id: mangaData.id },
-    update: { type: mangaData.type }, // Also update the type if it's somehow missing
-    create: {
-      id: mangaData.id,
-      title: mangaData.title,
-      imageUrl: mangaData.imageUrl,
-      type: mangaData.type, // <-- SAVE THE TYPE HERE
-      status: mangaData.status,
-    },
-  });
-
-  await prisma.userManga.create({
-    data: {
-      userId: userId,
-      mangaId: mangaData.id,
-      status: mangaData.userStatus || "PLAN_TO_READ",
-    },
-  });
-
-  revalidatePath("/dashboard");
-  return { success: true, message: "New entry added!" };
 }
 
 export async function createTag(name: string) {
@@ -328,6 +389,7 @@ export async function createTag(name: string) {
     if ((error as any).code === 'P2002') {
       return { success: false, error: "A tag with this name already exists." };
     }
+    console.error("Failed to create tag:", error);
     return { success: false, error: "Failed to create tag." };
   }
 }
@@ -349,6 +411,7 @@ export async function deleteTag(tagId: string) {
     revalidatePath("/dashboard"); // Also revalidate dashboard in case tags are removed
     return { success: true, message: "Tag deleted." };
   } catch (error) {
+    console.error("Failed to delete tag:", error);
     return { success: false, error: "Failed to delete tag." };
   }
 }

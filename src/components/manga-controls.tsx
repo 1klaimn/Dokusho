@@ -16,10 +16,8 @@ import {
 } from "@/src/lib/server-actions";
 import {
   ArrowUpRight,
-  Badge,
   Check,
   ChevronsUpDown,
-  Command,
   LinkIcon,
   Loader2,
   OctagonXIcon,
@@ -35,23 +33,25 @@ import {
   Popover,
   PopoverTrigger,
   PopoverContent,
-} from "@radix-ui/react-popover";
+} from "@/components/ui/popover";
 import {
   Select,
   SelectTrigger,
   SelectValue,
   SelectContent,
   SelectItem,
-} from "@radix-ui/react-select";
+} from "@/components/ui/select";
 import {
+  Command,
   CommandInput,
   CommandList,
   CommandEmpty,
   CommandGroup,
   CommandItem,
-} from "cmdk";
+} from "@/components/ui/command";
 import { UserMangaWithDetails } from "../app/(app)/dashboard/page";
 import { Tag, Source } from "@prisma/client";
+import { Badge } from "@/components/ui/badge";
 
 interface AddToListButtonProps {
   mangaData: {
@@ -85,7 +85,7 @@ export const AddToListButton = ({ mangaData }: AddToListButtonProps) => {
 
   const handleClick = () => {
     startTransition(async () => {
-      const result = await addMangaToList(mangaData); // The full data is now passed
+      const result = await addMangaToList(mangaData);
       if (result.success) {
         toast.success(result.message);
         router.push("/dashboard");
@@ -147,13 +147,11 @@ export const RemoveMangaButton = ({ userMangaId }: { userMangaId: string }) => {
     startTransition(async () => {
       const result = await removeMangaFromList(userMangaId);
       if (result.success) {
-        // --- Use a success toast but with a custom, destructive icon ---
         toast.success(result.message, {
           icon: (
             <OctagonXIcon className="size-4 text-red-600 dark:text-red-400" />
           ),
         });
-        // -----------------------------------------------------------------
       } else {
         toast.error(result.error);
       }
@@ -214,7 +212,6 @@ export const GoToSourceButton = ({ item }: GoToSourceButtonProps) => {
     startTransition(async () => {
       const result = await findNextChapterUrl(item.id);
       if (result.success && result.url) {
-        // Open the found URL in a new tab
         window.open(result.url, "_blank", "noopener,noreferrer");
       } else {
         toast.error(result.error || "Could not find source URL.");
@@ -249,7 +246,6 @@ export const ChapterSelector = ({
 
   useEffect(() => {
     if (mangaDexSource) {
-      // Wrap in async function to avoid setState in effect body
       const fetchChapters = async () => {
         setIsLoading(true);
         try {
@@ -262,7 +258,7 @@ export const ChapterSelector = ({
       fetchChapters();
     }
   }, [mangaDexSource]);
-  // If no MangaDex source, or still loading, show the original number input
+
   if (!mangaDexSource || isLoading) {
     return (
       <Input
@@ -276,7 +272,6 @@ export const ChapterSelector = ({
     );
   }
 
-  // If we have chapters, show the dropdown
   return (
     <Select
       value={String(progress)}
@@ -507,7 +502,6 @@ export const SourceManager = ({
 
   return (
     <div className="space-y-2">
-      {/* List of currently linked sources */}
       {item.sources.map((linkedSource) => (
         <div
           key={linkedSource.id}
@@ -552,7 +546,6 @@ export const SourceManager = ({
         </div>
       ))}
 
-      {/* Form to add a new source */}
       <div className="flex items-center gap-2">
         <Select value={selectedSourceId} onValueChange={setSelectedSourceId}>
           <SelectTrigger className="w-[150px] shrink-0 h-10">
