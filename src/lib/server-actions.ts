@@ -312,16 +312,33 @@ export async function findNextChapterUrl(userMangaId: string) {
 
 export async function addMangaToList(mangaData: MangaData) {
   const session = await getServerSession(authOptions);
-  
+
   if (!session?.user?.id) {
     return { success: false, error: "You must be logged in." };
   }
   const userId = session.user.id;
 
   try {
+    // Debugging: Check if the user exists before the transaction
+    const user = await prisma.user.findUnique({
+      where: {
+        id: userId,
+      },
+    });
+
+    if (!user) {
+      // If the user doesn't exist, return an error
+      return { success: false, error: "User not found." };
+    }
+
     // Check if entry already exists
     const existingEntry = await prisma.userManga.findUnique({
-      where: { userId_mangaId: { userId, mangaId: mangaData.id } },
+      where: {
+        userId_mangaId: {
+          userId: userId,
+          mangaId: mangaData.id,
+        },
+      },
     });
 
     if (existingEntry) {
@@ -329,15 +346,14 @@ export async function addMangaToList(mangaData: MangaData) {
     }
 
     // Use a transaction to ensure both operations succeed or fail together
-    await prisma.$transaction(async (tx) => {
-      // First, ensure the Manga exists in the database
-      await tx.manga.upsert({
+    await prisma.$transaction([
+      prisma.manga.upsert({
         where: { id: mangaData.id },
-        update: { 
+        update: {
           title: mangaData.title,
           imageUrl: mangaData.imageUrl,
           type: mangaData.type,
-          status: mangaData.status 
+          status: mangaData.status,
         },
         create: {
           id: mangaData.id,
@@ -346,17 +362,16 @@ export async function addMangaToList(mangaData: MangaData) {
           type: mangaData.type,
           status: mangaData.status,
         },
-      });
-
-      // Then create the UserManga entry
-      await tx.userManga.create({
+      }),
+      prisma.userManga.create({
         data: {
           userId: userId,
           mangaId: mangaData.id,
           status: mangaData.userStatus || "PLAN_TO_READ",
+          progress: 0,
         },
-      });
-    });
+      }),
+    ]);
 
     revalidatePath("/dashboard");
     return { success: true, message: "New entry added!" };
