@@ -23,10 +23,10 @@ interface SearchResult {
       small_image_url?: string;
     }; 
   }; 
-  chapters: number | null; 
-  members: number; 
-  status: string; 
-  type: string; 
+  chapters?: number | null; 
+  members?: number; 
+  status?: string; 
+  type?: string; 
 }
 
 export const SearchBar = () => {

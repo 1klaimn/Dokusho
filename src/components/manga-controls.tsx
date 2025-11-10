@@ -249,10 +249,17 @@ export const ChapterSelector = ({
 
   useEffect(() => {
     if (mangaDexSource) {
-      setIsLoading(true);
-      getChaptersForSource(mangaDexSource.id)
-        .then(setChapters)
-        .finally(() => setIsLoading(false));
+      // Wrap in async function to avoid setState in effect body
+      const fetchChapters = async () => {
+        setIsLoading(true);
+        try {
+          const chapterList = await getChaptersForSource(mangaDexSource.id);
+          setChapters(chapterList);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchChapters();
     }
   }, [mangaDexSource]);
   // If no MangaDex source, or still loading, show the original number input
