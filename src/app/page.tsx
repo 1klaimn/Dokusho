@@ -25,7 +25,7 @@ export default function HomePage() {
             Cross-site Series Tracker
           </h1>
           <p className="mt-6 text-lg md:text-xl max-w-2xl mx-auto text-muted-foreground">
-            Sync your reading across 20+ sites, discover new favourites, and share
+            Sync your reading across 20+ sites, discover new favorites, and share
             progress with friends—all for free.
           </p>
           <div className="mt-8">

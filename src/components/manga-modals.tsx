@@ -15,11 +15,10 @@ import { UserMangaWithDetails } from "@/app/(app)/dashboard/page";
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatStatus } from "@/src/lib/utils";
-import { ArrowRight } from "lucide-react";
+import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
-import { X } from 'lucide-react';
 import { ChapterSelector, MultiSelectTag, SourceManager } from "./manga-controls";
 
 interface EditProgressModalProps {
@@ -97,7 +96,7 @@ export const EditProgressModal = ({ item, availableSources, userTags, children }
                 className="absolute right-4 top-4 h-8 w-8 text-muted-foreground" 
                 onClick={() => setIsOpen(false)}
               >
-                <ArrowRight className="h-4 w-4" />
+                <X className="h-4 w-4" />
               </Button>
               <DialogHeader className="text-left p-0">
                 <DialogTitle className="text-xl font-semibold leading-tight pr-8">

@@ -116,7 +116,7 @@ export const SearchPalette = () => {
         <Command className="[&_[cmdk-input-wrapper]_svg]:h-6 [&_[cmdk-input-wrapper]_svg]:w-6 **:[[cmdk-input]]:h-16 **:[[cmdk-input]]:text-lg [&_[cmdk-input-wrapper]_button]:size-8">
           <CommandInput placeholder="Search everything..." value={search} onValueChange={setSearch} />
           <CommandList>
-            {isLoading && <CommandEmpty>Searching...</CommandEmpty>}
+            {isLoading && search.length > 1 && <CommandEmpty>Searching...</CommandEmpty>}
             {!isLoading && results.length === 0 && search.length > 1 && <CommandEmpty>No results found.</CommandEmpty>}
             
             {results.map((manga) => (
